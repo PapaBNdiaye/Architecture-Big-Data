@@ -194,7 +194,7 @@ services:
       - "9090:8080"
       - "7077:7077"
     environment:
-      - VISUAL_CROSSING_API_KEY=BYYWRZR3C5BF2TQ3UER8KPTYJ
+      - VISUAL_CROSSING_API_KEY=${VISUAL_CROSSING_API_KEY}
       - SPARK_SUBMIT_OPTS=-Dspark.hadoop.fs.defaultFS=hdfs://hdfs-namenode:8020
     volumes:
       - ./:/opt/spark/project
@@ -209,7 +209,7 @@ services:
     depends_on:
       - spark-master
     environment:
-      - VISUAL_CROSSING_API_KEY=BYYWRZR3C5BF2TQ3UER8KPTYJ
+      - VISUAL_CROSSING_API_KEY=${VISUAL_CROSSING_API_KEY}
       - SPARK_MODE=worker
       - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=1g

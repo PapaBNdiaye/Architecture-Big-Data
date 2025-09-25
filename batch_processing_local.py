@@ -60,15 +60,28 @@ def fetch_city_weather(city, start_date="2025-01-01", end_date="2025-01-10"):
 
             results = []
             for d in days:
-                results.append({
+                # Récupérer toutes les colonnes disponibles depuis l'API
+                result = {
                     "city": city,
                     "date": d.get("datetime"),
+                    "address": d.get("address"),
+                    "latitude": d.get("latitude"),
+                    "longitude": d.get("longitude"),
                     "temp": d.get("temp"),
+                    "tempmax": d.get("tempmax"),
+                    "tempmin": d.get("tempmin"),
                     "humidity": d.get("humidity"),
+                    "dew": d.get("dew"),
+                    "precip": d.get("precip"),
+                    "preciptype": d.get("preciptype"),
                     "pressure": d.get("pressure"),
                     "windspeed": d.get("windspeed"),
-                    "precip": d.get("precip")
-                })
+                    "windgust": d.get("windgust"),
+                    "winddir": d.get("winddir"),
+                    "cloudcover": d.get("cloudcover"),
+                    "visibility": d.get("visibility")
+                }
+                results.append(result)
             return results
 
         except Exception as e:
@@ -116,15 +129,34 @@ def main():
     sample_results = results_rdd.take(3)
     print(f"🔍 Exemples de données: {sample_results}")
 
-    weather_df = spark.createDataFrame(results_rdd.map(lambda x: Row(**x)))
+    # Définir le schéma explicitement pour éviter les erreurs d'inférence
+    from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
+    
+    schema = StructType([
+        StructField("city", StringType(), True),
+        StructField("date", StringType(), True),
+        StructField("address", StringType(), True),
+        StructField("latitude", DoubleType(), True),
+        StructField("longitude", DoubleType(), True),
+        StructField("temp", DoubleType(), True),
+        StructField("tempmax", DoubleType(), True),
+        StructField("tempmin", DoubleType(), True),
+        StructField("humidity", DoubleType(), True),
+        StructField("dew", DoubleType(), True),
+        StructField("precip", DoubleType(), True),
+        StructField("preciptype", StringType(), True),
+        StructField("pressure", DoubleType(), True),
+        StructField("windspeed", DoubleType(), True),
+        StructField("windgust", DoubleType(), True),
+        StructField("winddir", DoubleType(), True),
+        StructField("cloudcover", DoubleType(), True),
+        StructField("visibility", DoubleType(), True)
+    ])
+    
+    weather_df = spark.createDataFrame(results_rdd.map(lambda x: Row(**x)), schema)
 
-    # Cast des colonnes (seulement celles qui existent dans les données)
-    weather_df = weather_df.withColumn("date", col("date").cast("date")) \
-                           .withColumn("temp", col("temp").cast("double")) \
-                           .withColumn("humidity", col("humidity").cast("double")) \
-                           .withColumn("pressure", col("pressure").cast("double")) \
-                           .withColumn("windspeed", col("windspeed").cast("double")) \
-                           .withColumn("precip", col("precip").cast("double"))
+    # Convertir la colonne date en type date
+    weather_df = weather_df.withColumn("date", col("date").cast("date"))
 
     # === Sauvegarde uniquement des données brutes ===
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
