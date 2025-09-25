@@ -10,7 +10,7 @@ echo "=================================================="
 
 # Configuration de l'API Key
 echo "📝 Configuration de l'API Key Visual Crossing..."
-export VISUAL_CROSSING_API_KEY="votre_clé_api"
+export VISUAL_CROSSING_API_KEY="BYYWRZR3C5BF2TQ3UER8KPTYJ"
 
 # Démarrage des services Docker
 echo "🐳 Démarrage des services Docker..."

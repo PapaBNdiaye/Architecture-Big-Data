@@ -189,7 +189,7 @@ services:
   spark-master:
     container_name: spark-master
     image: bitnami/spark:3.4
-    command: bin/spark-class org.apache.spark.deploy.master.Master
+    command: bash -c "pip install -r /opt/spark/requirements_batch.txt && bin/spark-class org.apache.spark.deploy.master.Master"
     ports:
       - "9090:8080"
       - "7077:7077"
@@ -205,7 +205,7 @@ services:
   spark-worker:
     container_name: spark-worker
     image: bitnami/spark:3.4
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    command: bash -c "pip install -r /opt/spark/requirements_batch.txt && bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
     depends_on:
       - spark-master
     environment:
@@ -235,9 +235,23 @@ services:
     networks:
       - confluent
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - confluent
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
+  grafana_data:
 
 networks:
   confluent:

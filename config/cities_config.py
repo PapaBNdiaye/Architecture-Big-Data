@@ -6,7 +6,8 @@ Configuration simple des villes pour le traitement batch météo
 # Villes françaises principales (2 villes pour rester dans le quota de 1000 requêtes/jour)
 CITIES = [
     "Paris,FR",
-    "Lyon,FR"
+    "Lyon,FR",
+    "Marseille,FR"
 ]
 
 # Paramètres de traitement

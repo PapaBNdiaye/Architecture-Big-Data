@@ -21,7 +21,7 @@ API_KEY = os.getenv("VISUAL_CROSSING_API_KEY", "VOTRE_API_KEY")
 BASE_URL = API_CONFIG['base_url']
 
 # === Fonction exécutée par chaque worker ===
-def fetch_city_weather(city, start_date="2025-01-01", end_date="2025-01-10"):
+def fetch_city_weather(city, start_date="2021-01-01", end_date="2025-09-24"):
     max_retries = 3
     base_delay = 5
     
