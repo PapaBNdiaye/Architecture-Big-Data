@@ -104,7 +104,7 @@ services:
 
   webserver:
     image: apache/airflow:2.6.0-python3.9
-    command: bash -c "airflow db init && airflow users create --username admin --firstname admin --lastname admin --role Admin --email admin@example.com --password admin && airflow webserver"
+    command: bash -c "airflow db init && airflow users create --username alexandrenasalan --firstname alexandre --lastname nasalan --role Admin --email alexandrenasalan1@gmail.com --password Giscard.1996 && airflow webserver"
     depends_on:
       - postgres
     environment:
@@ -118,6 +118,7 @@ services:
         max-file: "3"
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./:/opt/airflow/project
       - ./requirements.txt:/opt/airflow/requirements.txt
     ports:
       - "8080:8080"
@@ -135,6 +136,7 @@ services:
       - postgres
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./:/opt/airflow/project
       - ./requirements.txt:/opt/airflow/requirements.txt
     environment:
       - LOAD_EX=n
@@ -232,6 +234,24 @@ services:
       - hdfs-namenode
     volumes:
       - hadoop_datanode:/hadoop/dfs/data
+    networks:
+      - confluent
+
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: weather-api-server
+    ports:
+      - "8000:8000"
+    environment:
+      - AIRFLOW_BASE_URL=http://webserver:8080
+      - HDFS_BASE_URL=http://hdfs-namenode:9870
+    depends_on:
+      - webserver
+      - hdfs-namenode
+    volumes:
+      - ./:/app
     networks:
       - confluent
 
