@@ -4,6 +4,37 @@ Script pour compter les lignes dans les données HDFS
 """
 
 from pyspark.sql import SparkSession
+import os
+import subprocess
+
+def find_latest_hdfs_directory():
+    """Trouve le répertoire le plus récent dans HDFS"""
+    try:
+        # Utiliser hadoop fs pour lister les répertoires
+        cmd = ["hadoop", "fs", "-ls", "/user/spark/weather/raw/"]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        
+        # Parser la sortie pour trouver les répertoires avec des timestamps
+        lines = result.stdout.strip().split('\n')
+        directories = []
+        
+        for line in lines:
+            if '2025' in line and 'drwx' in line:
+                # Extraire le nom du répertoire (dernier élément du chemin)
+                path = line.split()[-1]
+                dir_name = os.path.basename(path)
+                directories.append(dir_name)
+        
+        if directories:
+            # Trier par nom (qui contient le timestamp) et prendre le plus récent
+            directories.sort(reverse=True)
+            return directories[0]
+        else:
+            return None
+            
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la recherche du répertoire HDFS: {e}")
+        return None
 
 def main():
     spark = SparkSession.builder \
@@ -12,8 +43,25 @@ def main():
     
     spark.sparkContext.setLogLevel("WARN")
     
-    # Lire les données Parquet depuis HDFS
-    df = spark.read.parquet("hdfs://hdfs-namenode:8020/user/spark/weather/raw/20250925_080649")
+    # Trouver le répertoire le plus récent
+    latest_dir = find_latest_hdfs_directory()
+    
+    if latest_dir is None:
+        print("❌ Aucun répertoire de données trouvé dans HDFS")
+        print("💡 Assurez-vous que le traitement batch a été exécuté")
+        spark.stop()
+        return
+    
+    hdfs_path = f"hdfs://hdfs-namenode:8020/user/spark/weather/raw/{latest_dir}"
+    print(f"📁 Lecture des données depuis: {hdfs_path}")
+    
+    try:
+        # Lire les données Parquet depuis HDFS
+        df = spark.read.parquet(hdfs_path)
+    except Exception as e:
+        print(f"❌ Erreur lors de la lecture des données: {e}")
+        spark.stop()
+        return
     
     # Compter les lignes
     count = df.count()
