@@ -1,0 +1,150 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "type": "dashboard",
+        "name": "Annotations & Alerts",
+        "enable": true,
+        "hide": true
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Temperature (°C)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "influxdb", "uid": "influxdb"},
+          "query": "from(bucket: \"speed_bucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"temperature\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> keep(columns: [\"_time\", \"_value\", \"city\"])\n  |> group(columns: [\"city\"])"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Humidité (%)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "refId": "H",
+          "datasource": {"type": "influxdb", "uid": "influxdb"},
+          "query": "from(bucket: \"speed_bucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"humidity\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> keep(columns: [\"_time\", \"_value\", \"city\"])\n  |> group(columns: [\"city\"])"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Vent (km/h)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {
+          "refId": "W",
+          "datasource": {"type": "influxdb", "uid": "influxdb"},
+          "query": "from(bucket: \"speed_bucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"wind_speed\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> keep(columns: [\"_time\", \"_value\", \"city\"])\n  |> group(columns: [\"city\"])"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Précipitations (mm)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {
+          "refId": "P",
+          "datasource": {"type": "influxdb", "uid": "influxdb"},
+          "query": "from(bucket: \"speed_bucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"precipitation\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> keep(columns: [\"_time\", \"_value\", \"city\"])\n  |> group(columns: [\"city\"])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Pluie?",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 16},
+      "options": {"reduceOptions": {"calcs": ["last"], "fields": "_value"}, "orientation": "horizontal"},
+  "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "0"}, "1": {"text": "1"}}}], "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "blue", "value": 1}]}}},
+      "targets": [
+        {"refId": "R", "datasource": {"type": "influxdb", "uid": "influxdb"}, "query": "from(bucket: \"speed_bucket\")\n  |> range(start: -2h)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"is_rain\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> last()"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Orage?",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 16},
+      "options": {"reduceOptions": {"calcs": ["last"], "fields": "_value"}, "orientation": "horizontal"},
+  "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "0"}, "1": {"text": "1"}}}], "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+      "targets": [
+        {"refId": "S", "datasource": {"type": "influxdb", "uid": "influxdb"}, "query": "from(bucket: \"speed_bucket\")\n  |> range(start: -2h)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"is_storm\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> last()"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Température prochaine heure (°C)",
+      "gridPos": {"h": 8, "w": 12, "x": 8, "y": 16},
+      "targets": [
+  {"refId": "F1", "datasource": {"type": "influxdb", "uid": "influxdb"}, "query": "from(bucket: \"speed_bucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"next_hour_temp\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> keep(columns: [\"_time\", \"_value\", \"city\"])\n  |> group(columns: [\"city\"])"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total messages",
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 16},
+      "targets": [
+        {"refId": "CNT", "datasource": {"type": "influxdb", "uid": "influxdb"}, "query": "from(bucket: \"speed_bucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"weather\")\n  |> count()\n  |> last()"}
+      ]
+    }
+    ,{
+      "type": "table",
+      "title": "Debug Raw (10m)",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 20},
+      "targets": [
+        {"refId": "DBG", "datasource": {"type": "influxdb", "uid": "influxdb"}, "query": "from(bucket: \"speed_bucket\")\n  |> range(start: -10m)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"temperature\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> keep(columns: [\"_time\", \"_value\", \"city\", \"country\"])\n  |> sort(columns:[\"_time\"], desc: true)\n  |> limit(n:50)"}
+      ]
+    }
+    ,{
+      "type": "stat",
+      "title": "Messages 1m",
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 16},
+      "targets": [
+        {"refId": "HB", "datasource": {"type": "influxdb", "uid": "influxdb"}, "query": "from(bucket: \"speed_bucket\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"temperature\")\n  |> count()\n  |> last()"}
+      ]
+    }
+    ,{
+      "type": "stat",
+      "title": "Âge dernière mesure (s)",
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 16},
+      "targets": [
+        {"refId": "AGE", "datasource": {"type": "influxdb", "uid": "influxdb"}, "query": "lastPoint = from(bucket: \"speed_bucket\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"weather\" and r._field == \"temperature\" and r.country == \"FR\")\n  |> filter(fn: (r) => r.city =~ /${city:regex}/)\n  |> last()\n  |> keep(columns: [\"_time\"])\n  |> map(fn: (r) => ({ r with age_seconds: int(v: (uint(v: now()) - uint(v: r._time)) / 1000000000) }))\nlastPoint\n  |> keep(columns: [\"age_seconds\"])\n  |> rename(columns:{age_seconds: \"_value\"})"}
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["weather"],
+  "templating": {"list": [
+    {
+      "name": "city",
+      "type": "query",
+      "label": "Ville",
+      "datasource": {"type": "influxdb", "uid": "influxdb"},
+      "query": "import \"influxdata/influxdb/schema\"\n schema.tagValues(bucket: \"speed_bucket\", tag: \"city\", predicate: (r) => r._measurement == \"weather\" and r.country == \"FR\") |> sort()",
+      "refresh": 1,
+      "includeAll": true,
+      "multi": false,
+      "sort": 1
+    }
+  ]},
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Weather Stream",
+  "uid": "weather-stream",
+  "version": 7
+}
