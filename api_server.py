@@ -9,13 +9,22 @@ from datetime import datetime, timedelta
 import subprocess
 import json
 import requests
+import sys
+from collections import defaultdict
+
+# Import config
+sys.path.append(os.path.join(os.path.dirname(__file__), "config"))
+from cities_config import API_CONFIG, get_api_params
+
+API_KEY = os.getenv("VISUAL_CROSSING_API_KEY", "VOTRE_API_KEY")
+BASE_URL = API_CONFIG['base_url']
 
 app = FastAPI(title="Weather Batch API", version="1.0.0")
 
 # Configuration CORS pour le frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,6 +54,65 @@ class DataRow(BaseModel):
     metric_name: str
     metric_value: float
     source: str = "visualcrossing"
+
+# === Fonction pour récupérer les données météo ===
+def fetch_city_weather(city, start_date="2025-01-01", end_date="2025-01-10"):
+    max_retries = 3
+    base_delay = 5
+    
+    for attempt in range(max_retries):
+        try:
+            url = f"{BASE_URL}/{city}/{start_date}/{end_date}"
+            params = get_api_params()
+            params["key"] = API_KEY
+
+            print(f"📡 Fetching {city} → {url} (tentative {attempt + 1}/{max_retries})")
+            
+            # Délai progressif entre les tentatives
+            if attempt > 0:
+                delay = base_delay * (2 ** attempt)
+                print(f"⏳ Attente de {delay} secondes avant la tentative {attempt + 1}...")
+                time.sleep(delay)
+            else:
+                time.sleep(2)
+            
+            response = requests.get(url, params=params, timeout=30)
+            print(f"🔑 Status {response.status_code} for {city}")
+
+            if response.status_code == 429:
+                if attempt < max_retries - 1:
+                    print(f"⚠️ Limite de taux atteinte pour {city}, nouvelle tentative dans {base_delay * (2 ** attempt)} secondes...")
+                    continue
+                else:
+                    print(f"❌ Limite de taux persistante pour {city} après {max_retries} tentatives")
+                    return []
+
+            response.raise_for_status()
+            data = response.json()
+            days = data.get("days", [])
+
+            print(f"📊 {city} → {len(days)} jours reçus")
+
+            results = []
+            for d in days:
+                results.append({
+                    "city": city,
+                    "date": d.get("datetime"),
+                    "temp": d.get("temp"),
+                    "humidity": d.get("humidity"),
+                    "pressure": d.get("pressure"),
+                    "windspeed": d.get("windspeed"),
+                    "precip": d.get("precip")
+                })
+            return results
+
+        except Exception as e:
+            print(f"❌ Erreur pour {city} (tentative {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                return []
+            continue
+    
+    return []
 
 @app.get("/")
 async def root():
@@ -88,10 +156,10 @@ async def get_task_status(task_id: str):
             task["status"] = "RUNNING"
 
         # Simuler un traitement réussi après quelques secondes
-        if (datetime.now() - task["created_at"]).seconds > 5:
+        if (datetime.now() - task["created_at"]).seconds > 30:
             task["status"] = "SUCCESS"
-            # Générer des données de test
-            task["result"] = generate_mock_results(task["payload"])
+            # Générer des données de test (temporaire)
+            task["result"] = []
 
     except Exception as e:
         task["status"] = "FAILURE"
@@ -122,13 +190,13 @@ def process_batch_request(task_id: str, payload: RunPayload):
         print(f"Payload: {payload}")
 
         # Ici, en production, on déclencherait le DAG Airflow
-        # Pour l'instant, on simule le traitement
+        # Pour l'instant, on récupère les données réelles
 
         # Attendre un peu pour simuler le traitement
         time.sleep(3)
 
-        # Générer des résultats mockés
-        results = generate_mock_results(payload.dict())
+        # Générer des résultats réels
+        results = generate_real_results(payload.dict())
 
         # Mettre à jour la tâche
         tasks[task_id]["status"] = "SUCCESS"
@@ -140,37 +208,59 @@ def process_batch_request(task_id: str, payload: RunPayload):
         print(f"Error processing batch request {task_id}: {e}")
         tasks[task_id]["status"] = "FAILURE"
 
-def generate_mock_results(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Génère des données mockées pour les tests"""
+def generate_real_results(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Génère des données réelles depuis l'API Visual Crossing"""
     results = []
     locations = payload.get("locations", ["Paris,FR"])
-    metrics = payload.get("metrics", ["avg_temp_c"])
+    metrics = payload.get("metrics", ["temp", "precip"])
     start_date = payload.get("startDate", "2025-01-01")
-    end_date = payload.get("endDate", "2025-01-31")
+    end_date = payload.get("endDate", "2025-01-10")
 
-    # Générer des données pour chaque combinaison
+    # Mapping des métriques
+    metric_mapping = {
+        "temp": {"name": "avg_temp_c", "field": "temp"},
+        "precip": {"name": "sum_precip_mm", "field": "precip"},
+        "windspeed": {"name": "avg_windspeed", "field": "windspeed"},
+        "humidity": {"name": "avg_humidity", "field": "humidity"},
+    }
+
     for location in locations:
-        for metric in metrics:
-            # Générer quelques points de données
-            for month in range(1, 4):  # Janvier à Mars 2025
-                metric_date = f"2025-{month:02d}"
-                # Valeurs mockées selon la métrique
-                if "temp" in metric:
-                    value = 15 + month * 2 + (hash(location) % 10)  # Température variable
-                elif "precip" in metric:
-                    value = 50 + (hash(location) % 30)  # Précipitations
-                elif "rainy" in metric:
-                    value = 12 + (hash(location) % 8)  # Jours de pluie
-                else:
-                    value = 100 + (hash(location) % 50)  # Valeur par défaut
+        # Récupérer les données brutes pour la ville
+        data = fetch_city_weather(location, start_date, end_date)
+        if not data:
+            continue
 
-                results.append({
-                    "metric_date": metric_date,
-                    "location": location,
-                    "metric_name": metric,
-                    "metric_value": round(value, 2),
-                    "source": "visualcrossing"
-                })
+        # Grouper par mois
+        monthly_data = defaultdict(lambda: defaultdict(list))
+        for day in data:
+            date = day['date']
+            month = date[:7]  # YYYY-MM
+            for metric in metrics:
+                if metric in metric_mapping:
+                    field = metric_mapping[metric]["field"]
+                    if field in day:
+                        monthly_data[month][metric].append(day[field])
+
+        # Agréger les données
+        for month, metric_dict in monthly_data.items():
+            for metric, values in metric_dict.items():
+                if values:
+                    metric_info = metric_mapping[metric]
+                    metric_name = metric_info["name"]
+                    if "avg" in metric_name:
+                        value = sum(values) / len(values)
+                    elif "sum" in metric_name:
+                        value = sum(values)
+                    else:
+                        value = sum(values) / len(values)  # Moyenne par défaut
+
+                    results.append({
+                        "metric_date": month,
+                        "location": location,
+                        "metric_name": metric_name,
+                        "metric_value": round(value, 2),
+                        "source": "visualcrossing"
+                    })
 
     return results
 

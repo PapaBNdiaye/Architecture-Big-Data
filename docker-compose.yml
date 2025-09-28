@@ -196,7 +196,8 @@ services:
       - "9090:8080"
       - "7077:7077"
     environment:
-      - VISUAL_CROSSING_API_KEY=BLGS4FU48EV482YLSVEALG3WU
+      - VISUAL_CROSSING_API_KEY=BYYWRZR3C5BF2TQ3UER8KPTYJ
+      - PYTHONPATH=/opt/spark/project
       - SPARK_SUBMIT_OPTS=-Dspark.hadoop.fs.defaultFS=hdfs://hdfs-namenode:8020
     volumes:
       - ./:/opt/spark/project
@@ -211,7 +212,8 @@ services:
     depends_on:
       - spark-master
     environment:
-      - VISUAL_CROSSING_API_KEY=BLGS4FU48EV482YLSVEALG3WU
+      - VISUAL_CROSSING_API_KEY=BYYWRZR3C5BF2TQ3UER8KPTYJ
+      - PYTHONPATH=/opt/spark/project
       - SPARK_MODE=worker
       - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=1g
@@ -247,6 +249,7 @@ services:
     environment:
       - AIRFLOW_BASE_URL=http://webserver:8080
       - HDFS_BASE_URL=http://hdfs-namenode:9870
+      - VISUAL_CROSSING_API_KEY=BYYWRZR3C5BF2TQ3UER8KPTYJ
     depends_on:
       - webserver
       - hdfs-namenode

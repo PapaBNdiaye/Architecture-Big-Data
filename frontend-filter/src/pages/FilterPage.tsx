@@ -6,6 +6,7 @@ import ResultsTable from '../components/ResultsTable';
 import TempTrendChart from '../components/charts/TempTrendChart';
 import PrecipByMonthChart from '../components/charts/PrecipByMonthChart';
 import ThermalAmplitudeChart from '../components/charts/ThermalAmplitudeChart';
+import WindSpeedChart from '../components/charts/WindSpeedChart';
 import CityImageMap from '../components/CityImageMap';
 import type { Row as DataRow, RunPayload } from '../types';
 import { apiService } from '../api';
@@ -163,23 +164,6 @@ const FilterPage: React.FC = () => {
                 <Card
                   title={
                     <span>
-                      <BarChartOutlined style={{ marginRight: 8, color: '#52c41a' }} />
-                      Résultats du traitement batch ({results.length} mesures)
-                    </span>
-                  }
-                  style={{
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)'
-                  }}
-                >
-                  <ResultsTable data={results} />
-                </Card>
-
-                <Card
-                  title={
-                    <span>
                       📊 Analyses météorologiques - Données HDFS
                     </span>
                   }
@@ -191,16 +175,36 @@ const FilterPage: React.FC = () => {
                   }}
                 >
                   <AntRow gutter={[16, 16]}>
-                    <Col xs={24} xl={12}>
+                    <Col xs={24} xl={24}>
                       <TempTrendChart data={results} />
                     </Col>
-                    <Col xs={24} xl={12}>
+                    <Col xs={24} xl={24}>
                       <PrecipByMonthChart data={results} />
                     </Col>
-                    <Col xs={24}>
+                    <Col xs={24} xl={24}>
                       <ThermalAmplitudeChart data={results} />
                     </Col>
+                    <Col xs={24} xl={24}>
+                      <WindSpeedChart data={results} />
+                    </Col>
                   </AntRow>
+                </Card>
+
+                <Card
+                  title={
+                    <span>
+                      <BarChartOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+                      Résultats
+                    </span>
+                  }
+                  style={{
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                >
+                  <ResultsTable data={results} />
                 </Card>
 
                 <Card

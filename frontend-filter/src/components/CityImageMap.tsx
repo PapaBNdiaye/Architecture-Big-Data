@@ -2,7 +2,7 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { DataRow } from '../types';
+import type { Row } from '../types';
 
 // Fix pour les icônes Leaflet par défaut
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -20,7 +20,7 @@ const cityCoordinates: Record<string, { lat: number; lng: number; name: string }
 
 interface CityImageMapProps {
   onCityClick: (city: string) => void;
-  weatherData?: DataRow[];
+  weatherData?: Row[];
 }
 
 const CityImageMap: React.FC<CityImageMapProps> = ({ onCityClick, weatherData = [] }) => {

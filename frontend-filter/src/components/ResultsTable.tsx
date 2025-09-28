@@ -33,6 +33,8 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ data }) => {
           'sum_precip_mm': 'Précipitations (mm)',
           'rainy_days': 'Jours pluvieux',
           'temp_amp_c': 'Amplitude thermique (°C)',
+          'avg_humidity': 'Humidité relative (%)',
+          'avg_windspeed': 'Vitesse du vent (km/h)',
         };
         return labels[value] || value;
       },
@@ -59,7 +61,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ data }) => {
         columns={columns}
         rowKey={(record) => `${record.metric_date}-${record.location}-${record.metric_name}`}
         pagination={{
-          pageSize: 50,
+          pageSize: 5,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>

@@ -1,18 +1,18 @@
 import React from 'react';
 import { Card } from 'antd';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { Row } from '../../types';
 
-interface ThermalAmplitudeChartProps {
+interface WindSpeedChartProps {
   data: Row[];
 }
 
-const ThermalAmplitudeChart: React.FC<ThermalAmplitudeChartProps> = ({ data }) => {
-  // Filtrer les données d'humidité (remplace l'amplitude thermique qui n'existe pas)
-  const humidityData = data.filter(row => row.metric_name === 'avg_humidity');
+const WindSpeedChart: React.FC<WindSpeedChartProps> = ({ data }) => {
+  // Filtrer les données de vitesse du vent
+  const windData = data.filter(row => row.metric_name === 'avg_windspeed');
 
   // Transformer les données pour Recharts
-  const chartData = humidityData.reduce((acc: any[], row) => {
+  const chartData = windData.reduce((acc: any[], row) => {
     const existingEntry = acc.find(entry => entry.metric_date === row.metric_date);
     if (existingEntry) {
       existingEntry[row.location] = row.metric_value;
@@ -29,45 +29,48 @@ const ThermalAmplitudeChart: React.FC<ThermalAmplitudeChartProps> = ({ data }) =
   chartData.sort((a, b) => a.metric_date.localeCompare(b.metric_date));
 
   // Obtenir la liste des villes uniques
-  const cities = Array.from(new Set(humidityData.map(row => row.location)));
+  const cities = Array.from(new Set(windData.map(row => row.location)));
 
   if (chartData.length === 0) {
     return (
-      <Card title="Humidité relative moyenne">
-        <p>Aucune donnée d'humidité disponible</p>
+      <Card title="Vitesse du vent moyenne">
+        <p>Aucune donnée de vent disponible</p>
       </Card>
     );
   }
 
   return (
-    <Card title="Humidité relative moyenne par mois et par ville">
+    <Card title="Vitesse du vent moyenne par mois et par ville">
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={chartData}>
+        <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="metric_date"
             tick={{ fontSize: 12 }}
           />
           <YAxis
-            label={{ value: 'Humidité (%)', angle: -90, position: 'insideLeft' }}
+            label={{ value: 'Vitesse du vent (km/h)', angle: -90, position: 'insideLeft' }}
           />
           <Tooltip
-            formatter={(value: number) => [`${value.toFixed(1)}%`, '']}
+            formatter={(value: number) => [`${value.toFixed(1)} km/h`, '']}
             labelFormatter={(label) => `Mois: ${label}`}
           />
           <Legend />
           {cities.map((city, index) => (
-            <Bar
+            <Line
               key={city}
+              type="monotone"
               dataKey={city}
-              fill={`hsl(${index * 360 / cities.length + 60}, 70%, 50%)`}
-              radius={[2, 2, 0, 0]}
+              stroke={`hsl(${index * 360 / cities.length + 120}, 70%, 50%)`}
+              strokeWidth={2}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
             />
           ))}
-        </BarChart>
+        </LineChart>
       </ResponsiveContainer>
     </Card>
   );
 };
 
-export default ThermalAmplitudeChart;
+export default WindSpeedChart;

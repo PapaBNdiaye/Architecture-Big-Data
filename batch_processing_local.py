@@ -88,52 +88,22 @@ def main():
     
     print(f"🔑 API Key configurée: {API_KEY[:8]}...")
     
-    spark = SparkSession.builder \
-        .appName("WeatherBatchProcessingFullSparkRaw") \
-        .config("spark.hadoop.fs.defaultFS", "hdfs://hdfs-namenode:8020") \
-        .getOrCreate()
-
-    spark.sparkContext.setLogLevel("WARN")
-
-    # === Liste des villes depuis config ===
-    cities = CITIES
-
-    # === Distribution des appels API ===
-    print(f"🏙️  Traitement de {len(cities)} villes: {cities}")
-    rdd = spark.sparkContext.parallelize(cities, len(cities))
-    results_rdd = rdd.flatMap(lambda city: fetch_city_weather(city))
+    # === Test local sans Spark ===
+    cities = CITIES[:1]  # Une seule ville pour test
     
-    # Debug: compter les résultats avant création du DataFrame
-    results_count = results_rdd.count()
-    print(f"📊 Nombre total de résultats récupérés: {results_count}")
+    print(f"🏙️  Test avec {len(cities)} ville: {cities}")
     
-    if results_count == 0:
-        print("❌ Aucune donnée récupérée! Vérifiez votre API key et la connectivité.")
-        spark.stop()
-        return
+    for city in cities:
+        data = fetch_city_weather(city)
+        if data:
+            print(f"✅ Données récupérées pour {city}: {len(data)} jours")
+            print("Exemples de données:")
+            for d in data[:3]:  # Afficher 3 premiers jours
+                print(f"  {d}")
+        else:
+            print(f"❌ Aucune donnée pour {city}")
     
-    # Collecter quelques exemples pour debug
-    sample_results = results_rdd.take(3)
-    print(f"🔍 Exemples de données: {sample_results}")
-
-    weather_df = spark.createDataFrame(results_rdd.map(lambda x: Row(**x)))
-
-    # Cast des colonnes (seulement celles qui existent dans les données)
-    weather_df = weather_df.withColumn("date", col("date").cast("date")) \
-                           .withColumn("temp", col("temp").cast("double")) \
-                           .withColumn("humidity", col("humidity").cast("double")) \
-                           .withColumn("pressure", col("pressure").cast("double")) \
-                           .withColumn("windspeed", col("windspeed").cast("double")) \
-                           .withColumn("precip", col("precip").cast("double"))
-
-    # === Sauvegarde uniquement des données brutes ===
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    raw_output = f"hdfs://hdfs-namenode:8020/user/spark/weather/raw/{timestamp}"
-    weather_df.write.mode("overwrite").parquet(raw_output)
-
-    print(f"✅ Données brutes sauvegardées dans {raw_output}")
-
-    spark.stop()
+    print("✅ Test terminé avec succès!")
 
 if __name__ == "__main__":
     main()

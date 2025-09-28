@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, DatePicker, Select, Button, Card, Space, Tag } from 'antd';
+import { Form, Input, DatePicker, Select, Button, Card, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { RunPayload } from '../types';
@@ -60,9 +60,9 @@ const Filters: React.FC<FiltersProps> = ({ onRunQuery, loading }) => {
         onFinish={handleSubmit}
         initialValues={{
           granularity: 'days',
-          metrics: ['temp', 'precip'],
+          metrics: ['temp', 'precip', 'humidity', 'windspeed'],
           agg: 'avg_by_month',
-          dateRange: [dayjs().subtract(1, 'year'), dayjs()],
+          dateRange: [dayjs('2023-01-01'), dayjs()],
         }}
       >
         <Form.Item label="Villes" required>
