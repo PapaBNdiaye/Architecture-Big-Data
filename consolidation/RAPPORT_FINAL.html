@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture Lambda pour le Traitement de Données Météorologiques</title>
+    <style>
+        @page {
+            margin: 2.5cm;
+            @top-center {
+                content: "Architecture Lambda - Big Data";
+                font-family: 'Georgia', serif;
+                font-size: 10pt;
+                color: #666;
+            }
+            @bottom-center {
+                content: counter(page);
+                font-family: 'Georgia', serif;
+                font-size: 10pt;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            line-height: 1.8;
+            color: #2c3e50;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 60px;
+            background: #fff;
+        }
+        
+        .cover-page {
+            text-align: center;
+            padding: 120px 60px;
+            page-break-after: always;
+            border: 4px solid #2c3e50;
+            margin: 60px 0;
+            background: #f8f9fa;
+        }
+        
+        .cover-page h1 {
+            font-size: 36pt;
+            color: #2c3e50;
+            margin-bottom: 50px;
+            line-height: 1.4;
+            font-weight: bold;
+            letter-spacing: -0.5px;
+        }
+        
+        .cover-page .subtitle {
+            font-size: 20pt;
+            color: #2c3e50;
+            margin: 40px 0;
+            font-style: italic;
+            font-weight: 500;
+        }
+        
+        .cover-page .info {
+            margin-top: 70px;
+            font-size: 12pt;
+            color: #2c3e50;
+            line-height: 2.2;
+        }
+        
+        .cover-page .participants {
+            margin-top: 60px;
+            font-size: 13pt;
+            color: #2c3e50;
+            line-height: 2;
+        }
+        
+        .cover-page .participants p {
+            margin: 10px 0;
+        }
+        
+        .cover-page .date {
+            margin-top: 70px;
+            font-size: 15pt;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-size: 28pt;
+            color: #2c3e50;
+            margin: 60px 0 30px 0;
+            page-break-after: avoid;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            font-size: 20pt;
+            color: #2c3e50;
+            margin: 45px 0 25px 0;
+            page-break-after: avoid;
+            border-left: 6px solid #2c3e50;
+            padding-left: 20px;
+        }
+        
+        h3 {
+            font-size: 16pt;
+            color: #2c3e50;
+            margin: 35px 0 20px 0;
+            page-break-after: avoid;
+            font-weight: 600;
+        }
+        
+        h4 {
+            font-size: 14pt;
+            color: #2c3e50;
+            margin: 30px 0 15px 0;
+            page-break-after: avoid;
+            font-style: italic;
+            font-weight: 500;
+        }
+        
+        p {
+            margin: 18px 0;
+            text-align: justify;
+            font-size: 12pt;
+            line-height: 1.9;
+        }
+        
+        ul, ol {
+            margin: 25px 0 25px 40px;
+        }
+        
+        li {
+            margin: 12px 0;
+            font-size: 12pt;
+            line-height: 1.8;
+        }
+        
+        .toc {
+            page-break-after: always;
+            padding: 40px;
+            background: #f8f9fa;
+            border-left: 6px solid #2c3e50;
+            margin: 40px 0;
+        }
+        
+        .toc h2 {
+            border: none;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 24pt;
+        }
+        
+        .toc ul {
+            list-style: none;
+        }
+        
+        .toc li {
+            margin: 15px 0;
+            font-size: 13pt;
+        }
+        
+        .toc a {
+            color: #2c3e50;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .toc a:hover {
+            color: #2c3e50;
+            text-decoration: underline;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            border-left: 5px solid #2c3e50;
+            padding: 25px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 11pt;
+            line-height: 1.7;
+            margin: 30px 0;
+            page-break-inside: avoid;
+        }
+        
+        code {
+            background: #f8f9fa;
+            padding: 3px 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11pt;
+            border-radius: 3px;
+            color: #2c3e50;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 35px 0;
+            font-size: 12pt;
+            page-break-inside: avoid;
+        }
+        
+        th {
+            background: #2c3e50;
+            color: white;
+            padding: 16px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 13pt;
+        }
+        
+        td {
+            padding: 14px 16px;
+            border: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .diagram {
+            background: #f8f9fa;
+            border: 3px solid #2c3e50;
+            padding: 30px;
+            margin: 40px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 11pt;
+            line-height: 1.6;
+            page-break-inside: avoid;
+        }
+        
+        .architecture-diagram {
+            background: white;
+            padding: 40px;
+            margin: 40px 0;
+            page-break-inside: avoid;
+        }
+        
+        .arch-box {
+            background: white;
+            border: 3px solid #2c3e50;
+            padding: 20px;
+            margin: 20px auto;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.1);
+        }
+        
+        .arch-box.source {
+            max-width: 600px;
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+            font-size: 14pt;
+        }
+        
+        .arch-layer-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .arch-layer {
+            flex: 1;
+            background: #f8f9fa;
+            border: 3px solid #2c3e50;
+            padding: 25px;
+            border-radius: 8px;
+            min-height: 280px;
+        }
+        
+        .arch-layer h4 {
+            color: #2c3e50;
+            margin: 0 0 20px 0;
+            font-size: 16pt;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+        }
+        
+        .arch-layer .subtitle {
+            font-size: 11pt;
+            font-style: italic;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .arch-layer ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+        }
+        
+        .arch-layer li {
+            padding: 8px 0;
+            color: #2c3e50;
+            font-size: 12pt;
+        }
+        
+        .arch-layer li:before {
+            content: "▪ ";
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        
+        .arch-serving {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #f8f9fa;
+            border: 3px solid #2c3e50;
+            padding: 25px;
+            border-radius: 8px;
+        }
+        
+        .arch-serving h4 {
+            color: #2c3e50;
+            margin: 0 0 20px 0;
+            font-size: 16pt;
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+        }
+        
+        .arch-frontend-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            margin-top: 25px;
+        }
+        
+        .arch-frontend {
+            flex: 1;
+            background: white;
+            border: 2px solid #2c3e50;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 13pt;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .arrow-down {
+            text-align: center;
+            font-size: 24pt;
+            color: #2c3e50;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        
+        .note {
+            background: #f8f9fa;
+            border-left: 6px solid #2c3e50;
+            padding: 25px;
+            margin: 35px 0;
+            page-break-inside: avoid;
+        }
+        
+        .note strong {
+            color: #2c3e50;
+            font-size: 13pt;
+        }
+        
+        .note ul {
+            margin-top: 15px;
+        }
+        
+        .section-break {
+            page-break-before: always;
+        }
+        
+        blockquote {
+            border-left: 5px solid #2c3e50;
+            padding-left: 25px;
+            margin: 30px 0;
+            font-style: italic;
+            color: #2c3e50;
+            font-size: 13pt;
+        }
+        
+        hr {
+            border: none;
+            border-top: 2px solid #2c3e50;
+            margin: 50px 0;
+            opacity: 0.3;
+        }
+        
+        .highlight {
+            background: #f8f9fa;
+            padding: 3px 6px;
+            border-radius: 3px;
+        }
+        
+        strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .footer {
+            margin-top: 80px;
+            padding-top: 30px;
+            border-top: 3px solid #2c3e50;
+            text-align: center;
+            color: #2c3e50;
+            font-size: 11pt;
+            line-height: 2;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .no-print {
+                display: none;
+            }
+            a {
+                color: #2c3e50;
+                text-decoration: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Page de couverture -->
+<div class="cover-page">
+    <h1>Architecture Lambda pour le Traitement de Données Météorologiques</h1>
+    <div class="subtitle">Projet académique - Big Data & Architecture Distribuée</div>
+    <div class="info">
+        <p><strong>Domaine :</strong> Big Data, Architecture Lambda, Systèmes Distribués</p>
+        <p><strong>Technologies :</strong> Apache Spark, Kafka, Airflow, HDFS, InfluxDB, Grafana</p>
+        <p><strong>Infrastructure :</strong> Docker, Docker Compose</p>
+    </div>
+    <div class="participants">
+        <p><strong>Réalisé par :</strong></p>
+        <p>NDIAYE Papa</p>
+        <p>Giscard NASALAN</p>
+        <p>Djouwo Nacky</p>
+        <p>Mamadou Baldé</p>
+    </div>
+    <div style="margin-top: 40px; font-size: 11pt; color: #2c3e50;">
+        <p><strong>Dépôt GitHub :</strong></p>
+        <p style="font-family: 'Courier New', monospace;">https://github.com/PapaBNdiaye/Architecture-Big-Data.git</p>
+    </div>
+    <div class="date">Septembre 2025</div>
+</div>
+
+<!-- Table des matières -->
+<div class="toc">
+    <h2>Table des matières</h2>
+    <ul>
+        <li><a href="#introduction">1. Introduction</a></li>
+        <li><a href="#contexte">2. Contexte et objectifs</a></li>
+        <li><a href="#architecture">3. Architecture Lambda</a></li>
+        <li><a href="#technologies">4. Technologies utilisées</a></li>
+        <li><a href="#implementation">5. Implémentation détaillée</a></li>
+        <li><a href="#deploiement">6. Guide de déploiement</a></li>
+        <li><a href="#difficultes">7. Difficultés rencontrées</a></li>
+        <li><a href="#apprentissages">8. Apprentissages</a></li>
+        <li><a href="#conclusion">9. Conclusion</a></li>
+    </ul>
+</div>
+
+<!-- Contenu principal -->
+<div class="section-break"></div>
+
+<h1 id="introduction">1. Introduction</h1>
+
+<p>Ce document présente la réalisation d'un pipeline de traitement de données complet basé sur l'architecture Lambda. Le projet vise à mettre en place un système capable de collecter, traiter et visualiser des données météorologiques en temps réel et par batch, tout en respectant les principes fondamentaux de l'architecture Lambda.</p>
+
+<p>L'architecture Lambda, introduite par Nathan Marz, répond à un besoin croissant dans le domaine du Big Data : la capacité de traiter simultanément des données historiques volumineuses (batch) et des données en flux continu (streaming) pour fournir une vue unifiée et cohérente des informations.</p>
+
+<p>Notre implémentation s'appuie sur des technologies open-source reconnues dans l'écosystème Big Data et démontre concrètement comment orchestrer plusieurs systèmes distribués pour répondre à des besoins de traitement de données variés.</p>
+
+<hr>
+
+<h1 id="contexte" class="section-break">2. Contexte et objectifs</h1>
+
+<h2>2.1 Contexte du projet</h2>
+
+<p>Dans le cadre d'un projet académique sur les architectures Big Data, nous avons été amenés à concevoir et implémenter un pipeline complet de traitement de données. Le choix s'est porté sur les données météorologiques pour plusieurs raisons :</p>
+
+<ul>
+    <li>Disponibilité de données réelles via des APIs publiques</li>
+    <li>Variabilité temporelle intéressante pour l'analyse</li>
+    <li>Pertinence pour des cas d'usage réels (agriculture, transport, énergie)</li>
+    <li>Volume de données suffisant pour justifier une architecture distribuée</li>
+</ul>
+
+<h2>2.2 Objectifs principaux</h2>
+
+<p>Le projet devait répondre aux exigences suivantes :</p>
+
+<ol>
+    <li><strong>Architecture Lambda complète</strong> : Implémenter les trois couches (Batch, Speed, Serving)</li>
+    <li><strong>Collecte de données réelles</strong> : Utiliser l'API Visual Crossing Weather</li>
+    <li><strong>Traitement batch</strong> : Analyses historiques et calculs d'agrégats</li>
+    <li><strong>Traitement temps réel</strong> : Ingestion et traitement de flux continus</li>
+    <li><strong>Visualisation unifiée</strong> : Dashboards combinant données batch et streaming</li>
+    <li><strong>Orchestration</strong> : Automatisation des workflows via Airflow</li>
+    <li><strong>Isolation des services</strong> : Déploiement containerisé avec Docker</li>
+    <li><strong>Documentation</strong> : Guide complet d'installation et d'utilisation</li>
+</ol>
+
+<h2>2.3 Cas d'usage visés</h2>
+
+<p>Le système permet de répondre à plusieurs besoins :</p>
+
+<ul>
+    <li>Surveillance en temps réel des conditions météorologiques</li>
+    <li>Analyse de tendances historiques sur plusieurs mois</li>
+    <li>Comparaison des conditions entre différentes villes</li>
+    <li>Détection d'événements météorologiques significatifs</li>
+    <li>Prévisions basées sur l'historique des données</li>
+</ul>
+
+<hr>
+
+<h1 id="architecture" class="section-break">3. Architecture Lambda</h1>
+
+<h2>3.1 Principes de l'architecture Lambda</h2>
+
+<p>L'architecture Lambda repose sur trois couches complémentaires :</p>
+
+<div class="note">
+    <strong>Couche Batch (Batch Layer)</strong>
+    <ul>
+        <li>Traite l'ensemble des données historiques</li>
+        <li>Précision maximale au détriment de la latence</li>
+        <li>Vue complète et immuable des données</li>
+        <li>Recalcule périodiquement les vues batch</li>
+    </ul>
+</div>
+
+<div class="note">
+    <strong>Couche Speed (Speed Layer)</strong>
+    <ul>
+        <li>Traite uniquement les données récentes</li>
+        <li>Latence minimale au détriment de la précision</li>
+        <li>Compense le délai de la couche batch</li>
+        <li>Données incrémentales et éphémères</li>
+    </ul>
+</div>
+
+<div class="note">
+    <strong>Couche Serving (Serving Layer)</strong>
+    <ul>
+        <li>Fusionne les résultats des deux couches</li>
+        <li>Répond aux requêtes des utilisateurs</li>
+        <li>Présente une vue unifiée des données</li>
+        <li>Gère la visualisation et l'accès aux données</li>
+    </ul>
+</div>
+
+<h2>3.2 Architecture globale du système</h2>
+
+<p>Notre implémentation se structure selon trois couches distinctes qui communiquent entre elles :</p>
+
+<div class="architecture-diagram">
+    <!-- Source de données -->
+    <div class="arch-box source">
+        SOURCE DE DONNÉES<br>
+        API Visual Crossing Weather
+    </div>
+    
+    <div class="arrow-down">↓</div>
+    
+    <!-- Batch et Speed Layer -->
+    <div class="arch-layer-container">
+        <div class="arch-layer">
+            <h4>BATCH LAYER</h4>
+            <div class="subtitle">Traitement historique complet</div>
+            <ul>
+                <li>Apache Spark</li>
+                <li>HDFS (Stockage distribué)</li>
+                <li>PostgreSQL (Export)</li>
+                <li>Apache Airflow (Orchestration)</li>
+            </ul>
+            <p style="margin-top: 20px; font-size: 11pt; color: #2c3e50;">
+                <strong>Objectif :</strong> Analyses approfondies, agrégations mensuelles, détection de tendances
+            </p>
+        </div>
+        
+        <div class="arch-layer">
+            <h4>SPEED LAYER</h4>
+            <div class="subtitle">Traitement temps réel</div>
+            <ul>
+                <li>Apache Kafka (Streaming)</li>
+                <li>Spark Streaming</li>
+                <li>InfluxDB (Time-series)</li>
+                <li>Cassandra (NoSQL)</li>
+                <li>Telegraf (Collecte)</li>
+            </ul>
+            <p style="margin-top: 20px; font-size: 11pt; color: #2c3e50;">
+                <strong>Objectif :</strong> Ingestion continue, faible latence, monitoring en direct
+            </p>
+        </div>
+    </div>
+    
+    <div class="arrow-down">↓</div>
+    
+    <!-- Serving Layer -->
+    <div class="arch-serving">
+        <h4>SERVING LAYER</h4>
+        <p style="font-size: 11pt; margin-bottom: 20px; color: #2c3e50;">
+            Fusion des vues batch et temps réel
+        </p>
+        <div class="arch-frontend-container">
+            <div class="arch-frontend">
+                Grafana<br>
+                <span style="font-size: 10pt; font-weight: normal;">Dashboards interactifs</span>
+            </div>
+            <div class="arch-frontend">
+                FastAPI + React<br>
+                <span style="font-size: 10pt; font-weight: normal;">Interface utilisateur</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<p><strong>Flux de données</strong> :</p>
+<ul>
+    <li><strong>Batch Layer</strong> : Collecte périodique (quotidienne), traitement historique complet, analyses approfondies avec Spark</li>
+    <li><strong>Speed Layer</strong> : Ingestion continue via Kafka, traitement en streaming, latence inférieure à 5 secondes</li>
+    <li><strong>Serving Layer</strong> : Fusion des résultats des deux couches pour offrir une vue complète et à jour aux utilisateurs</li>
+</ul>
+
+<h2>3.3 Flux de données détaillé</h2>
+
+<h3>3.3.1 Couche Batch</h3>
+
+<div class="architecture-diagram" style="padding: 30px;">
+    <div style="max-width: 500px; margin: 0 auto;">
+        <div class="arch-frontend" style="background: #2c3e50; color: white;">
+            API Visual Crossing
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #f8f9fa;">
+            Script Python<br>
+            <span style="font-size: 10pt; font-weight: normal;">Collecte périodique</span>
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #f8f9fa;">
+            Apache Spark<br>
+            <span style="font-size: 10pt; font-weight: normal;">Traitement distribué</span>
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #f8f9fa;">
+            HDFS<br>
+            <span style="font-size: 10pt; font-weight: normal;">Stockage brut + résultats</span>
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #f8f9fa;">
+            Analyses Spark<br>
+            <span style="font-size: 10pt; font-weight: normal;">Agrégations, statistiques</span>
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #f8f9fa;">
+            PostgreSQL<br>
+            <span style="font-size: 10pt; font-weight: normal;">Export des résultats</span>
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #2c3e50; color: white;">
+            Grafana<br>
+            <span style="font-size: 10pt; font-weight: normal; color: white;">Visualisation batch</span>
+        </div>
+    </div>
+</div>
+
+<p><strong>Orchestration</strong> : Apache Airflow déclenche le workflow batch selon un planning défini (quotidien, hebdomadaire).</p>
+
+<h3>3.3.2 Couche Speed</h3>
+
+<div class="architecture-diagram" style="padding: 30px;">
+    <div style="max-width: 650px; margin: 0 auto;">
+        <div class="arch-frontend" style="background: #2c3e50; color: white;">
+            API Visual Crossing<br>
+            <span style="font-size: 10pt; font-weight: normal; color: white;">Polling continu</span>
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #f8f9fa;">
+            Producteur Kafka Python
+        </div>
+        <div class="arrow-down">↓</div>
+        
+        <div class="arch-frontend" style="background: #f8f9fa;">
+            Topic Kafka<br>
+            <span style="font-size: 10pt; font-weight: normal;">weather_data_v2</span>
+        </div>
+        
+        <div style="display: flex; gap: 30px; margin-top: 30px;">
+            <div style="flex: 1;">
+                <div class="arrow-down">↓</div>
+                <div class="arch-frontend" style="background: #f8f9fa;">
+                    Telegraf<br>
+                    <span style="font-size: 10pt; font-weight: normal;">Consumer Kafka</span>
+                </div>
+                <div class="arrow-down">↓</div>
+                <div class="arch-frontend" style="background: #f8f9fa;">
+                    InfluxDB<br>
+                    <span style="font-size: 10pt; font-weight: normal;">Time-series DB</span>
+                </div>
+            </div>
+            
+            <div style="flex: 1;">
+                <div class="arrow-down">↓</div>
+                <div class="arch-frontend" style="background: #f8f9fa;">
+                    Spark Streaming<br>
+                    <span style="font-size: 10pt; font-weight: normal;">Traitement temps réel</span>
+                </div>
+                <div class="arrow-down">↓</div>
+                <div class="arch-frontend" style="background: #f8f9fa;">
+                    Cassandra<br>
+                    <span style="font-size: 10pt; font-weight: normal;">NoSQL distribué</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="arrow-down">↓</div>
+        <div class="arch-frontend" style="background: #2c3e50; color: white;">
+            Grafana<br>
+            <span style="font-size: 10pt; font-weight: normal; color: white;">Visualisation temps réel</span>
+        </div>
+    </div>
+</div>
+
+<p><strong>Temps de latence</strong> : Moins de 5 secondes entre la collecte et la visualisation dans Grafana.</p>
+
+<h3>3.3.3 Couche Serving</h3>
+
+<p>La couche serving combine les deux sources :</p>
+
+<ul>
+    <li><strong>Grafana</strong> : Dashboards avec sources multiples (InfluxDB + PostgreSQL)</li>
+    <li><strong>FastAPI</strong> : API REST exposant batch et speed data</li>
+    <li><strong>Frontend React</strong> : Interface utilisateur avec filtres et visualisations</li>
+</ul>
+
+<h2>3.4 Choix d'architecture</h2>
+
+<p>Plusieurs décisions architecturales ont été prises :</p>
+
+<h3>1. Séparation physique des stockages</h3>
+<ul>
+    <li>HDFS pour les données batch (immutables, volumineuses)</li>
+    <li>InfluxDB pour le streaming (time-series, optimisé lecture rapide)</li>
+    <li>PostgreSQL pour l'export batch (requêtes SQL complexes)</li>
+    <li>Cassandra pour le streaming alternatif (haute disponibilité)</li>
+</ul>
+
+<h3>2. Double pipeline de streaming</h3>
+<ul>
+    <li>Telegraf → InfluxDB : Simplicité, faible latence</li>
+    <li>Spark Streaming → Cassandra : Flexibilité, transformations complexes</li>
+</ul>
+
+<h3>3. Orchestration centralisée</h3>
+<ul>
+    <li>Airflow gère les workflows batch ET speed</li>
+    <li>Visibilité unifiée de tous les traitements</li>
+    <li>Gestion des dépendances entre tâches</li>
+</ul>
+
+<hr>
+
+<h1 id="technologies" class="section-break">4. Technologies utilisées</h1>
+
+<h2>4.1 Infrastructure et orchestration</h2>
+
+<h3>Docker & Docker Compose</h3>
+<ul>
+    <li>Isolation complète des services</li>
+    <li>Reproductibilité de l'environnement</li>
+    <li>Facilité de déploiement</li>
+    <li>Gestion des réseaux et volumes</li>
+</ul>
+
+<h3>Apache Airflow 2.6</h3>
+<ul>
+    <li>Orchestration des workflows</li>
+    <li>Planification des tâches batch</li>
+    <li>Monitoring des exécutions</li>
+    <li>Gestion des dépendances</li>
+</ul>
+
+<h2>4.2 Couche Batch</h2>
+
+<h3>Apache Spark 3.4</h3>
+<ul>
+    <li>Traitement distribué en mémoire</li>
+    <li>API PySpark pour Python</li>
+    <li>Support natif HDFS et Parquet</li>
+    <li>Transformations et agrégations performantes</li>
+</ul>
+
+<h3>HDFS (Hadoop 3.2)</h3>
+<ul>
+    <li>Système de fichiers distribué</li>
+    <li>Tolérance aux pannes</li>
+    <li>Scalabilité horizontale</li>
+    <li>Format Parquet pour l'optimisation</li>
+</ul>
+
+<h3>PostgreSQL 14</h3>
+<ul>
+    <li>Base relationnelle robuste</li>
+    <li>Requêtes SQL complexes</li>
+    <li>Intégration native avec Grafana</li>
+    <li>Indexation performante</li>
+</ul>
+
+<h2>4.3 Couche Speed</h2>
+
+<h3>Apache Kafka 7.4</h3>
+<ul>
+    <li>Plateforme de streaming distribuée</li>
+    <li>Haute disponibilité et débit</li>
+    <li>Rétention configurable des messages</li>
+    <li>Découplage producteur/consommateur</li>
+</ul>
+
+<h3>InfluxDB 2.7</h3>
+<ul>
+    <li>Base de données time-series</li>
+    <li>Requêtes Flux optimisées</li>
+    <li>Compression efficace</li>
+    <li>Rétention automatique</li>
+</ul>
+
+<h3>Telegraf 1.30</h3>
+<ul>
+    <li>Agent de collecte léger</li>
+    <li>Parsing JSON natif</li>
+    <li>Plugins multiples</li>
+    <li>Faible overhead</li>
+</ul>
+
+<h2>4.4 Couche Serving</h2>
+
+<h3>Grafana 10.4</h3>
+<ul>
+    <li>Visualisation multi-sources</li>
+    <li>Dashboards interactifs</li>
+    <li>Alertes configurables</li>
+    <li>Provisioning as code</li>
+</ul>
+
+<h3>FastAPI</h3>
+<ul>
+    <li>Framework Python moderne</li>
+    <li>Documentation auto-générée</li>
+    <li>Validation automatique</li>
+    <li>Performance élevée</li>
+</ul>
+
+<h3>React + TypeScript</h3>
+<ul>
+    <li>Interface utilisateur moderne</li>
+    <li>Composants réutilisables</li>
+    <li>Type-safety</li>
+    <li>Écosystème riche</li>
+</ul>
+
+<hr>
+
+<h1 id="implementation" class="section-break">5. Implémentation détaillée</h1>
+
+<h2>5.1 Structure du projet</h2>
+
+<p>Le projet est organisé en trois dossiers principaux avant consolidation :</p>
+
+<ul>
+    <li><strong>batch/</strong> : Couche batch complète</li>
+    <li><strong>speedLayers/</strong> : Couche speed complète</li>
+    <li><strong>front/</strong> : Frontend et API</li>
+    <li><strong>consolidation/</strong> : Architecture Lambda unifiée</li>
+</ul>
+
+<h2>5.2 Couche Batch - Implémentation</h2>
+
+<h3>5.2.1 Collecte des données</h3>
+
+<p>Le script de collecte batch utilise PySpark pour distribuer les appels API. Chaque worker Spark traite une ville indépendamment, permettant la parallélisation. Les données sont stockées en Parquet dans HDFS avec partitionnement par date.</p>
+
+<h3>5.2.2 Analyses</h3>
+
+<p>Analyses météorologiques avancées :</p>
+<ul>
+    <li>Calcul des moyennes mensuelles</li>
+    <li>Identification des extrêmes</li>
+    <li>Comparaisons inter-villes</li>
+    <li>Corrélations entre variables</li>
+    <li>Clustering des villes par profil météo</li>
+    <li>Analyse d'amplitude thermique</li>
+</ul>
+
+<h3>5.2.3 Export PostgreSQL</h3>
+
+<p>Les résultats d'analyses sont exportés dans PostgreSQL pour :</p>
+<ul>
+    <li>Faciliter les requêtes SQL complexes</li>
+    <li>Permettre l'intégration avec Grafana</li>
+    <li>Offrir une API de données structurées</li>
+</ul>
+
+<h3>5.2.4 Orchestration Airflow</h3>
+
+<p>DAG de traitement batch avec les étapes suivantes :</p>
+<pre><code>check_hdfs >> process_batch >> validate_data >> export_postgres >> setup_grafana</code></pre>
+
+<p><strong>Planification</strong> : Quotidien à 2h du matin<br>
+<strong>Retry</strong> : 3 tentatives avec délai exponentiel<br>
+<strong>Alertes</strong> : Email en cas d'échec</p>
+
+<h2>5.3 Couche Speed - Implémentation</h2>
+
+<h3>5.3.1 Producteur Kafka</h3>
+
+<p>Producteur Python avec deux modes :</p>
+<ul>
+    <li><strong>Mode ponctuel</strong> : Envoie N messages puis s'arrête</li>
+    <li><strong>Mode continu</strong> : Boucle infinie avec intervalle configurable</li>
+</ul>
+
+<p>Fonctionnalités :</p>
+<ul>
+    <li>Appel API Visual Crossing en temps réel</li>
+    <li>Fallback simulation si API indisponible</li>
+    <li>Enrichissement des données (is_rain, is_storm, prévisions)</li>
+    <li>Format RFC3339 pour les timestamps</li>
+    <li>Gestion des signaux (CTRL+C propre)</li>
+</ul>
+
+<h3>5.3.2 Pipeline Telegraf</h3>
+
+<p>Configuration Telegraf :</p>
+<ul>
+    <li><strong>Input</strong> : Consumer Kafka (Topic: weather_data_v2)</li>
+    <li><strong>Format</strong> : JSON v2 avec mapping explicite</li>
+    <li><strong>Parsing timestamp</strong> : RFC3339</li>
+    <li><strong>Output</strong> : InfluxDB v2 (Bucket: speed_bucket)</li>
+</ul>
+
+<h2>5.4 Couche Serving - Implémentation</h2>
+
+<h3>5.4.1 Grafana</h3>
+
+<p><strong>Datasources provisionnées</strong> :</p>
+<ul>
+    <li>InfluxDB (speed layer)</li>
+    <li>PostgreSQL (batch layer)</li>
+</ul>
+
+<p><strong>Dashboards</strong> :</p>
+<ul>
+    <li>Speed Dashboard : Température, humidité, vent en temps réel</li>
+    <li>Batch Dashboard : Analyses historiques, tendances</li>
+    <li>Variables dynamiques : Sélection de ville</li>
+</ul>
+
+<h3>5.4.2 API FastAPI</h3>
+
+<p>Endpoints principaux :</p>
+<ul>
+    <li><code>POST /run</code> : Lancer une requête batch</li>
+    <li><code>GET /status/{task_id}</code> : Vérifier le statut</li>
+    <li><code>GET /fetch/{task_id}</code> : Récupérer les résultats</li>
+    <li><code>GET /speed/latest</code> : Dernières données temps réel</li>
+    <li><code>GET /batch/monthly</code> : Moyennes mensuelles</li>
+</ul>
+
+<h2>5.5 Intégration et consolidation</h2>
+
+<p>Le dossier <code>consolidation/</code> unifie les trois couches :</p>
+
+<ul>
+    <li><strong>Docker Compose unique</strong> : Réseau partagé, 15+ services orchestrés</li>
+    <li><strong>Configuration unifiée</strong> : Variables d'environnement centralisées</li>
+    <li><strong>Volumes persistants</strong> : Sauvegarde des données</li>
+</ul>
+
+<hr>
+
+<h1 id="deploiement" class="section-break">6. Guide de déploiement</h1>
+
+<h2>6.1 Prérequis</h2>
+
+<h3>Matériel recommandé</h3>
+<ul>
+    <li>CPU : 4 cœurs minimum (8 recommandés)</li>
+    <li>RAM : 8 GB minimum (16 GB recommandés)</li>
+    <li>Disque : 20 GB libres</li>
+    <li>Réseau : Connexion Internet stable</li>
+</ul>
+
+<h3>Logiciels</h3>
+<ul>
+    <li>Docker Desktop 20.10+</li>
+    <li>Docker Compose 2.0+</li>
+    <li>Python 3.9+ (optionnel, pour tests)</li>
+    <li>Git</li>
+</ul>
+
+<h3>Compte API</h3>
+<p>Visual Crossing Weather (gratuit jusqu'à 1000 requêtes/jour)</p>
+
+<h2>6.2 Installation étape par étape</h2>
+
+<h3>Étape 1 : Cloner le dépôt</h3>
+<pre><code>git clone &lt;url_du_depot&gt;
+cd Architecture-Big-Data/consolidation</code></pre>
+
+<h3>Étape 2 : Configurer l'environnement</h3>
+<pre><code># Copier le template
+cp env.example .env
+
+# Éditer le fichier .env
+# Ajouter votre clé API Visual Crossing
+nano .env</code></pre>
+
+<h3>Étape 3 : Démarrer les services</h3>
+<pre><code># Lancer tous les conteneurs
+docker-compose up -d
+
+# Vérifier le statut
+docker-compose ps
+
+# Suivre les logs
+docker-compose logs -f</code></pre>
+
+<p><strong>Temps d'initialisation</strong> : 3-5 minutes pour que tous les services soient opérationnels.</p>
+
+<h2>6.3 Accès aux interfaces</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Service</th>
+            <th>URL</th>
+            <th>Identifiants</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Airflow</strong></td>
+            <td>http://localhost:8080</td>
+            <td>admin / admin</td>
+            <td>Orchestration des workflows</td>
+        </tr>
+        <tr>
+            <td><strong>Grafana</strong></td>
+            <td>http://localhost:3000</td>
+            <td>admin / admin12345</td>
+            <td>Visualisation temps réel et batch</td>
+        </tr>
+        <tr>
+            <td><strong>Spark Master</strong></td>
+            <td>http://localhost:9090</td>
+            <td>-</td>
+            <td>Interface Spark</td>
+        </tr>
+        <tr>
+            <td><strong>Kafka Control Center</strong></td>
+            <td>http://localhost:9021</td>
+            <td>-</td>
+            <td>Monitoring Kafka</td>
+        </tr>
+        <tr>
+            <td><strong>HDFS NameNode</strong></td>
+            <td>http://localhost:9871</td>
+            <td>-</td>
+            <td>Interface HDFS</td>
+        </tr>
+        <tr>
+            <td><strong>InfluxDB</strong></td>
+            <td>http://localhost:8086</td>
+            <td>admin / admin12345</td>
+            <td>Time-series database</td>
+        </tr>
+        <tr>
+            <td><strong>API Backend</strong></td>
+            <td>http://localhost:8000</td>
+            <td>-</td>
+            <td>API REST backend</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>6.4 Lancement des traitements</h2>
+
+<h3>Batch Layer</h3>
+<ol>
+    <li>Accéder à Airflow : http://localhost:8080</li>
+    <li>Activer le DAG "weather_batch_processing"</li>
+    <li>Déclencher manuellement ou attendre l'exécution planifiée</li>
+    <li>Vérifier les logs dans l'interface Airflow</li>
+</ol>
+
+<h3>Speed Layer</h3>
+<pre><code># Lancer le producteur Kafka
+python scripts/kafka_producer.py --continuous --interval 60
+
+# Ou via le DAG Airflow
+# Activer "kafka_weather_stream"</code></pre>
+
+<h2>6.5 Visualisation dans Grafana</h2>
+
+<ol>
+    <li>Accéder à http://localhost:3000</li>
+    <li>Login : admin / admin12345</li>
+    <li>Naviguer vers Dashboards</li>
+    <li>Sélectionner "Speed Layer Dashboard" ou "Batch Dashboard"</li>
+    <li>Utiliser les filtres de ville et de période</li>
+</ol>
+
+<hr>
+
+<h1 id="difficultes" class="section-break">7. Difficultés rencontrées</h1>
+
+<h2>7.1 Gestion de la clé API</h2>
+
+<p><strong>Problème</strong> : Limitation de 1000 requêtes/jour sur l'API Visual Crossing.</p>
+
+<p><strong>Impact</strong> : Impossibilité de récupérer des données historiques massives pour toutes les villes.</p>
+
+<p><strong>Solution adoptée</strong> :</p>
+<ul>
+    <li>Limitation à 5 villes françaises stratégiques</li>
+    <li>Mise en cache des données dans HDFS</li>
+    <li>Fallback sur simulation de données si quota atteint</li>
+    <li>Implémentation d'un retry avec backoff exponentiel</li>
+</ul>
+
+<h2>7.2 Synchronisation HDFS et Spark</h2>
+
+<p><strong>Problème</strong> : Spark n'arrivait pas à écrire dans HDFS au démarrage.</p>
+
+<p><strong>Cause</strong> : HDFS NameNode en mode "safe mode" au démarrage, permissions insuffisantes.</p>
+
+<p><strong>Solution</strong> :</p>
+<ul>
+    <li>Ajout de healthchecks sur HDFS</li>
+    <li>Script d'initialisation pour créer les répertoires</li>
+    <li>Configuration explicite de <code>fs.defaultFS</code> dans Spark</li>
+    <li>Attente de HDFS dans le DAG Airflow</li>
+</ul>
+
+<h2>7.3 Parsing des timestamps</h2>
+
+<p><strong>Problème</strong> : Incohérences temporelles entre les différentes sources de données.</p>
+
+<p><strong>Cause</strong> : Formats de timestamps différents (ISO 8601, epoch, RFC3339).</p>
+
+<p><strong>Solution</strong> :</p>
+<ul>
+    <li>Standardisation sur RFC3339 UTC avec suffixe Z</li>
+    <li>Parsing explicite dans Telegraf</li>
+    <li>Conversion systématique dans les scripts Python</li>
+    <li>Validation des timestamps dans les tests</li>
+</ul>
+
+<h2>7.4 Mémoire Spark</h2>
+
+<p><strong>Problème</strong> : Out of Memory lors du traitement de datasets volumineux.</p>
+
+<p><strong>Cause</strong> : Configuration par défaut insuffisante pour les workers Spark.</p>
+
+<p><strong>Solution</strong> :</p>
+<ul>
+    <li>Augmentation de <code>SPARK_WORKER_MEMORY</code> à 1GB</li>
+    <li>Partitionnement des données par ville</li>
+    <li>Utilisation du format Parquet (compression)</li>
+    <li>Nettoyage régulier des fichiers temporaires</li>
+</ul>
+
+<h2>7.5 Conflits de ports</h2>
+
+<p><strong>Problème</strong> : Plusieurs services voulaient utiliser le port 8080.</p>
+
+<p><strong>Cause</strong> : Airflow, Spark UI et autres services en conflit.</p>
+
+<p><strong>Solution</strong> :</p>
+<ul>
+    <li>Spark UI mappé sur 9090</li>
+    <li>Documentation claire des ports utilisés</li>
+    <li>Vérification des ports avant démarrage</li>
+    <li>Flexibilité dans le docker-compose</li>
+</ul>
+
+<h2>7.6 Intégration Grafana</h2>
+
+<p><strong>Problème</strong> : Dashboards perdus après redémarrage de Grafana.</p>
+
+<p><strong>Cause</strong> : Configuration manuelle non persistée.</p>
+
+<p><strong>Solution</strong> :</p>
+<ul>
+    <li>Provisioning as code (YAML + JSON)</li>
+    <li>Volumes persistants pour Grafana</li>
+    <li>Dashboards versionnés dans Git</li>
+    <li><code>allowUiUpdates=false</code> pour garantir cohérence</li>
+</ul>
+
+<h2>7.7 Dépendances Python</h2>
+
+<p><strong>Problème</strong> : Versions incompatibles entre Airflow, Spark et les scripts.</p>
+
+<p><strong>Cause</strong> : Multiples fichiers <code>requirements.txt</code> non synchronisés.</p>
+
+<p><strong>Solution</strong> :</p>
+<ul>
+    <li>Requirements.txt consolidé</li>
+    <li>Installation dans les images Docker</li>
+    <li>Tests d'intégration avant déploiement</li>
+    <li>Documentation des versions exactes</li>
+</ul>
+
+<h2>7.8 Réseau Docker</h2>
+
+<p><strong>Problème</strong> : Services ne se trouvaient pas entre eux.</p>
+
+<p><strong>Cause</strong> : Réseaux Docker différents entre batch, speed et front.</p>
+
+<p><strong>Solution</strong> :</p>
+<ul>
+    <li>Réseau unique <code>lambda_network</code></li>
+    <li>Noms de services cohérents et documentés</li>
+    <li>DNS Docker pour la résolution</li>
+    <li>Tests de connectivité entre services</li>
+</ul>
+
+<hr>
+
+<h1 id="apprentissages" class="section-break">8. Apprentissages</h1>
+
+<h2>8.1 Architecture distribuée</h2>
+
+<h3>Architecture Lambda en pratique</h3>
+
+<p>La mise en œuvre concrète de l'architecture Lambda nous a permis de comprendre :</p>
+<ul>
+    <li>L'importance de séparer les traitements batch et streaming</li>
+    <li>Les compromis latence/précision inhérents à chaque couche</li>
+    <li>La complexité de fusionner deux vues des données</li>
+    <li>Les bénéfices d'une architecture tolérante aux pannes</li>
+</ul>
+
+<h3>Coordination de services distribués</h3>
+
+<p>Orchestrer 15+ services Docker nous a appris :</p>
+<ul>
+    <li>L'importance des healthchecks et dépendances</li>
+    <li>La gestion des ordres de démarrage</li>
+    <li>Les stratégies de retry et timeout</li>
+    <li>La nécessité d'une bonne observabilité</li>
+</ul>
+
+<h2>8.2 Technologies Big Data</h2>
+
+<h3>Apache Spark</h3>
+<p>Apprentissages sur Spark :</p>
+<ul>
+    <li>PySpark pour le traitement distribué en Python</li>
+    <li>Optimisations : partitionnement, broadcast, cache</li>
+    <li>Gestion de la mémoire et du garbage collection</li>
+    <li>Intégration avec HDFS et formats optimisés (Parquet)</li>
+</ul>
+
+<h3>Apache Kafka</h3>
+<p>Compréhensions clés :</p>
+<ul>
+    <li>Architecture producteur/consommateur découplée</li>
+    <li>Notion de topics, partitions et consumer groups</li>
+    <li>Garanties de livraison (at-least-once, exactly-once)</li>
+    <li>Performance et tuning (batch size, linger time)</li>
+</ul>
+
+<h3>HDFS</h3>
+<p>Concepts maîtrisés :</p>
+<ul>
+    <li>Architecture NameNode/DataNode</li>
+    <li>Réplication et tolérance aux pannes</li>
+    <li>Organisation hiérarchique des données</li>
+    <li>Intégration avec l'écosystème Hadoop</li>
+</ul>
+
+<h3>Apache Airflow</h3>
+<p>Compétences acquises :</p>
+<ul>
+    <li>Définition de DAGs et dépendances</li>
+    <li>Gestion de l'état et des retries</li>
+    <li>Variables et connexions</li>
+    <li>Monitoring et debugging des workflows</li>
+</ul>
+
+<h2>8.3 Bases de données spécialisées</h2>
+
+<h3>InfluxDB (Time-Series)</h3>
+<p>Apprentissages :</p>
+<ul>
+    <li>Optimisation pour les séries temporelles</li>
+    <li>Langage Flux pour les requêtes</li>
+    <li>Tags vs Fields</li>
+    <li>Stratégies de rétention</li>
+</ul>
+
+<h3>Cassandra (NoSQL distribuée)</h3>
+<p>Concepts découverts :</p>
+<ul>
+    <li>Architecture sans master</li>
+    <li>Modélisation orientée requêtes</li>
+    <li>Cohérence éventuelle</li>
+    <li>Performance en écriture</li>
+</ul>
+
+<h3>PostgreSQL (Relationnelle)</h3>
+<p>Utilisation pour :</p>
+<ul>
+    <li>Requêtes analytiques complexes</li>
+    <li>Jointures et agrégations</li>
+    <li>Intégration BI (Grafana)</li>
+    <li>Indexation et optimisation</li>
+</ul>
+
+<h2>8.4 DevOps et conteneurisation</h2>
+
+<h3>Docker & Docker Compose</h3>
+<p>Maîtrise de :</p>
+<ul>
+    <li>Création d'images multi-stages</li>
+    <li>Gestion des volumes et réseaux</li>
+    <li>Variables d'environnement et secrets</li>
+    <li>Orchestration de services complexes</li>
+</ul>
+
+<h3>Infrastructure as Code</h3>
+<p>Pratiques adoptées :</p>
+<ul>
+    <li>Configuration versionnée (Git)</li>
+    <li>Provisioning automatique (Grafana)</li>
+    <li>Reproductibilité des environnements</li>
+    <li>Documentation technique</li>
+</ul>
+
+<h2>8.5 Programmation et bonnes pratiques</h2>
+
+<h3>Python pour le Big Data</h3>
+<p>Compétences renforcées :</p>
+<ul>
+    <li>Scripts robustes avec retry et error handling</li>
+    <li>Logging structuré et debuggable</li>
+    <li>Gestion des APIs avec rate limiting</li>
+    <li>Code modulaire et réutilisable</li>
+</ul>
+
+<h3>Documentation et communication</h3>
+<p>Importance de :</p>
+<ul>
+    <li>Documentation technique claire et à jour</li>
+    <li>Diagrammes d'architecture</li>
+    <li>Guides d'installation détaillés</li>
+    <li>Exemples de commandes pratiques</li>
+</ul>
+
+<h2>8.6 Analyse de données</h2>
+
+<h3>Métriques météorologiques</h3>
+<p>Compréhension de :</p>
+<ul>
+    <li>Variables climatiques (température, pression, humidité)</li>
+    <li>Corrélations entre phénomènes</li>
+    <li>Saisonnalité et tendances</li>
+    <li>Détection d'anomalies</li>
+</ul>
+
+<h3>Visualisation</h3>
+<p>Apprentissages sur :</p>
+<ul>
+    <li>Choix des types de graphiques adaptés</li>
+    <li>Dashboards interactifs et ergonomiques</li>
+    <li>Couleurs et lisibilité</li>
+    <li>Variables dynamiques et filtres</li>
+</ul>
+
+<h2>8.7 Gestion de projet</h2>
+
+<h3>Méthodologie</h3>
+<p>Leçons apprises :</p>
+<ul>
+    <li>Importance de tests à chaque étape</li>
+    <li>Développement itératif par couche</li>
+    <li>Documentation continue</li>
+    <li>Gestion des blocages et pivots</li>
+</ul>
+
+<hr>
+
+<h1 id="conclusion" class="section-break">9. Conclusion</h1>
+
+<h2>9.1 Bilan du projet</h2>
+
+<p>Ce projet nous a permis de mettre en pratique les concepts théoriques de l'architecture Lambda et de l'écosystème Big Data. Nous avons réussi à déployer un système complet et fonctionnel capable de :</p>
+
+<ul>
+    <li>Collecter des données météorologiques réelles via API</li>
+    <li>Les traiter en batch pour des analyses historiques</li>
+    <li>Les ingérer en temps réel pour un monitoring continu</li>
+    <li>Les visualiser de manière unifiée dans Grafana</li>
+    <li>Orchestrer l'ensemble via Airflow</li>
+</ul>
+
+<p>L'architecture déployée est robuste, scalable et maintenable. Elle démontre la puissance de l'approche Lambda pour traiter simultanément des besoins batch et streaming.</p>
+
+<h2>9.2 Objectifs atteints</h2>
+
+<p>Tous les objectifs initiaux ont été remplis :</p>
+
+<ul>
+    <li>Architecture Lambda complète (3 couches fonctionnelles)</li>
+    <li>Collecte de données réelles (Visual Crossing API)</li>
+    <li>Traitement batch (Spark + HDFS + PostgreSQL)</li>
+    <li>Traitement streaming (Kafka + InfluxDB + Cassandra)</li>
+    <li>Visualisation unifiée (Grafana multi-sources)</li>
+    <li>Orchestration (Airflow avec DAGs)</li>
+    <li>Isolation (Docker Compose avec 15+ services)</li>
+    <li>Documentation (README + Rapport technique)</li>
+</ul>
+
+<h2>9.3 Points forts de la solution</h2>
+
+<ul>
+    <li><strong>Modularité</strong> : Chaque couche peut évoluer indépendamment.</li>
+    <li><strong>Scalabilité</strong> : Architecture distribuée prête pour la montée en charge.</li>
+    <li><strong>Résilience</strong> : Redondance des stockages, retry automatiques.</li>
+    <li><strong>Flexibilité</strong> : Double pipeline speed (Telegraf et Spark Streaming).</li>
+    <li><strong>Observabilité</strong> : Monitoring complet via Airflow, Grafana et logs.</li>
+</ul>
+
+<h2>9.4 Limites et améliorations possibles</h2>
+
+<h3>Limites actuelles</h3>
+<ol>
+    <li>Pas de haute disponibilité (single node)</li>
+    <li>Sécurité basique (mots de passe en clair)</li>
+    <li>Pas d'alerting automatique</li>
+    <li>Volume de données limité par l'API gratuite</li>
+    <li>Pas de tests automatisés</li>
+</ol>
+
+<h3>Améliorations envisageables</h3>
+
+<p><strong>Court terme</strong> :</p>
+<ul>
+    <li>Alerting Grafana sur anomalies</li>
+    <li>Tests unitaires et d'intégration</li>
+    <li>CI/CD avec GitHub Actions</li>
+    <li>Monitoring des ressources (Prometheus)</li>
+</ul>
+
+<p><strong>Moyen terme</strong> :</p>
+<ul>
+    <li>Authentification et RBAC</li>
+    <li>Chiffrement des communications (SSL/TLS)</li>
+    <li>Backup automatisé des données</li>
+    <li>Documentation API avec Swagger</li>
+</ul>
+
+<p><strong>Long terme</strong> :</p>
+<ul>
+    <li>Déploiement Kubernetes</li>
+    <li>Cluster Spark multi-nœuds</li>
+    <li>Machine Learning pour prévisions</li>
+    <li>Data Lake avec Delta Lake</li>
+</ul>
+
+<h2>9.5 Compétences acquises</h2>
+
+<p>Ce projet a permis de développer des compétences sur :</p>
+
+<h3>Technique</h3>
+<ul>
+    <li>Architecture distribuée et Big Data</li>
+    <li>Technologies Hadoop, Spark, Kafka</li>
+    <li>Orchestration Airflow</li>
+    <li>Visualisation Grafana</li>
+    <li>Conteneurisation Docker</li>
+</ul>
+
+<h3>Méthodologie</h3>
+<ul>
+    <li>Infrastructure as Code</li>
+    <li>Documentation technique</li>
+    <li>Débogage de systèmes distribués</li>
+    <li>Gestion de dépendances complexes</li>
+</ul>
+
+<h3>Analyse</h3>
+<ul>
+    <li>Traitement de données temporelles</li>
+    <li>Agrégations et statistiques</li>
+    <li>Visualisation de métriques</li>
+    <li>Détection de patterns</li>
+</ul>
+
+<h2>9.6 Perspectives professionnelles</h2>
+
+<p>Les compétences acquises sont directement applicables dans :</p>
+
+<ul>
+    <li>Ingénierie de données (Data Engineering)</li>
+    <li>Architecture Big Data</li>
+    <li>DevOps et SRE</li>
+    <li>Développement de pipelines ETL</li>
+    <li>Projets IoT et time-series</li>
+</ul>
+
+<p>L'expérience pratique d'orchestrer plusieurs technologies distribuées est particulièrement valorisable dans le monde professionnel.</p>
+
+<h2>9.7 Mot de fin</h2>
+
+<p>Ce projet a été une expérience enrichissante qui nous a confrontés à la complexité réelle des systèmes Big Data en production. Les difficultés rencontrées nous ont permis de développer notre capacité à débugger, chercher des solutions et adapter notre approche.</p>
+
+<p>L'architecture Lambda s'est révélée être un pattern puissant pour répondre à des besoins mixtes batch/streaming. Sa mise en œuvre concrète nous a fait prendre conscience des compromis inhérents à toute architecture distribuée.</p>
+
+<p>Nous sommes satisfaits du résultat obtenu : un système fonctionnel, documenté et démontrable qui illustre les concepts fondamentaux du Big Data moderne.</p>
+
+<hr>
+
+<div class="footer">
+    <p><strong>Date de réalisation</strong> : Septembre 2025</p>
+    <p><strong>Technologies</strong> : Apache Spark, Kafka, Airflow, HDFS, InfluxDB, Grafana, Docker</p>
+    <p><strong>Architecture</strong> : Lambda (Batch + Speed + Serving)</p>
+    <br>
+    <p>Projet académique - Architecture Lambda pour le traitement de données météorologiques</p>
+</div>
+
+
+</body>
+</html>

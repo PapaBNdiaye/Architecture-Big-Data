@@ -1,0 +1,391 @@
+version: '3'
+
+services:
+  # ============================================
+  # KAFKA & ZOOKEEPER (Partagé Batch & Speed)
+  # ============================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ['CMD', 'bash', '-c', "echo 'ruok' | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lambda_network
+
+  broker:
+    image: confluentinc/cp-server:7.4.0
+    hostname: broker
+    container_name: broker
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: 'false'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    networks:
+      - lambda_network
+    healthcheck:
+      test: [ "CMD", "bash", "-c", 'nc -z localhost 9092' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.4.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      broker:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - lambda_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.4.0
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      broker:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      CONFLIENT_METRICS_ENABLE: 'false'
+      PORT: 9021
+    networks:
+      - lambda_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9021/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ============================================
+  # AIRFLOW (Orchestration Batch & Speed)
+  # ============================================
+  postgres:
+    image: postgres:14.0
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - lambda_network
+
+  postgres-batch:
+    image: postgres:14.0
+    container_name: postgres-batch
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=weather
+      - POSTGRES_PASSWORD=weather
+      - POSTGRES_DB=weather_db
+    volumes:
+      - postgres_batch_data:/var/lib/postgresql/data
+    networks:
+      - lambda_network
+
+  webserver:
+    image: apache/airflow:2.6.0-python3.9
+    container_name: airflow-webserver
+    command: bash -c "airflow db init && airflow users create --username admin --firstname admin --lastname user --role Admin --email admin@example.com --password admin && airflow webserver"
+    depends_on:
+      - postgres
+    environment:
+      - LOAD_EX=n
+      - EXECUTOR=Sequential
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW_WEBSERVER_SECRET_KEY=this_is_a_very_secured_key
+      - VISUAL_CROSSING_API_KEY=${VISUAL_CROSSING_API_KEY}
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./configs:/opt/airflow/configs
+      - ./requirements.txt:/opt/airflow/requirements.txt
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ['CMD-SHELL', "[ -f /opt/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - lambda_network
+
+  scheduler:
+    image: apache/airflow:2.6.0-python3.9
+    container_name: airflow-scheduler
+    depends_on:
+      - postgres
+      - webserver
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./configs:/opt/airflow/configs
+      - ./requirements.txt:/opt/airflow/requirements.txt
+    environment:
+      - LOAD_EX=n
+      - EXECUTOR=Sequential
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW_WEBSERVER_SECRET_KEY=this_is_a_very_secured_key
+      - VISUAL_CROSSING_API_KEY=${VISUAL_CROSSING_API_KEY}
+    command: bash -c "pip install -r /opt/airflow/requirements.txt && airflow db upgrade && airflow scheduler"
+    networks:
+      - lambda_network
+
+  # ============================================
+  # SPARK (Batch & Speed Processing)
+  # ============================================
+  spark-master:
+    container_name: spark-master
+    image: bitnami/spark:3.4
+    command: bash -c "pip install -r /opt/spark/requirements.txt && bin/spark-class org.apache.spark.deploy.master.Master"
+    ports:
+      - "9090:8080"
+      - "7077:7077"
+    environment:
+      - VISUAL_CROSSING_API_KEY=${VISUAL_CROSSING_API_KEY}
+      - PYTHONPATH=/opt/spark/scripts
+      - SPARK_SUBMIT_OPTS=-Dspark.hadoop.fs.defaultFS=hdfs://hdfs-namenode:8020
+    volumes:
+      - ./scripts:/opt/spark/scripts
+      - ./configs:/opt/spark/configs
+      - ./requirements.txt:/opt/spark/requirements.txt
+    networks:
+      - lambda_network
+
+  spark-worker:
+    container_name: spark-worker
+    image: bitnami/spark:3.4
+    command: bash -c "pip install -r /opt/spark/requirements.txt && bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"
+    depends_on:
+      - spark-master
+    environment:
+      - VISUAL_CROSSING_API_KEY=${VISUAL_CROSSING_API_KEY}
+      - PYTHONPATH=/opt/spark/scripts
+      - SPARK_MODE=worker
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=1g
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_SUBMIT_OPTS=-Dspark.hadoop.fs.defaultFS=hdfs://hdfs-namenode:8020
+    volumes:
+      - ./scripts:/opt/spark/scripts
+      - ./configs:/opt/spark/configs
+      - ./requirements.txt:/opt/spark/requirements.txt
+    networks:
+      - lambda_network
+
+  # ============================================
+  # HDFS (Batch Layer Storage)
+  # ============================================
+  hdfs-namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-namenode
+    environment:
+      - CLUSTER_NAME=lambda_cluster
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs-namenode:8020
+    ports:
+      - "9871:9870"
+      - "8020:8020"
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    networks:
+      - lambda_network
+
+  hdfs-datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-datanode
+    environment:
+      - CLUSTER_NAME=lambda_cluster
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs-namenode:8020
+      - SERVICE_PRECONDITION=hdfs-namenode:9870
+    depends_on:
+      - hdfs-namenode
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    networks:
+      - lambda_network
+
+  # ============================================
+  # CASSANDRA (Speed Layer Storage)
+  # ============================================
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra
+    hostname: cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=100M
+      - CASSANDRA_USERNAME=cassandra
+      - CASSANDRA_PASSWORD=cassandra
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    networks:
+      - lambda_network
+
+  # ============================================
+  # INFLUXDB (Speed Layer Time-Series Storage)
+  # ============================================
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin12345
+      - DOCKER_INFLUXDB_INIT_ORG=lambda_org
+      - DOCKER_INFLUXDB_INIT_BUCKET=speed_bucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=lambda-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    networks:
+      - lambda_network
+
+  # ============================================
+  # TELEGRAF (Speed Layer Data Collection)
+  # ============================================
+  telegraf:
+    image: telegraf:1.30
+    container_name: telegraf
+    depends_on:
+      broker:
+        condition: service_healthy
+      influxdb:
+        condition: service_started
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    networks:
+      - lambda_network
+
+  # ============================================
+  # GRAFANA (Serving Layer - Visualization)
+  # ============================================
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin12345
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    depends_on:
+      - influxdb
+      - postgres-batch
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - lambda_network
+
+  # ============================================
+  # API SERVER (Serving Layer - Backend)
+  # ============================================
+  api-server:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.api
+    container_name: lambda-api-server
+    ports:
+      - "8000:8000"
+    environment:
+      - AIRFLOW_BASE_URL=http://webserver:8080
+      - HDFS_BASE_URL=http://hdfs-namenode:9870
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=lambda-token
+      - INFLUXDB_ORG=lambda_org
+      - INFLUXDB_BUCKET=speed_bucket
+      - POSTGRES_HOST=postgres-batch
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=weather
+      - POSTGRES_PASSWORD=weather
+      - POSTGRES_DB=weather_db
+      - VISUAL_CROSSING_API_KEY=${VISUAL_CROSSING_API_KEY}
+    depends_on:
+      - webserver
+      - hdfs-namenode
+      - influxdb
+      - postgres-batch
+    volumes:
+      - ./frontend:/app
+      - ./scripts:/app/scripts
+    networks:
+      - lambda_network
+
+volumes:
+  postgres_data:
+  postgres_batch_data:
+  hadoop_namenode:
+  hadoop_datanode:
+  cassandra_data:
+  influxdb_data:
+  influxdb_config:
+  grafana_data:
+
+networks:
+  lambda_network:
+    driver: bridge
