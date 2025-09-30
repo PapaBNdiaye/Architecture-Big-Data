@@ -1,0 +1,33 @@
+# Architecture Lambda - Requirements consolidés
+# Batch Layer + Speed Layer + Serving Layer
+
+# Core Python packages
+requests==2.31.0
+python-dateutil==2.8.2
+PyYAML==6.0.1
+pandas==2.0.3
+numpy==1.24.3
+
+# Kafka (Speed & Batch)
+kafka-python==2.0.2
+
+# Spark
+pyspark==3.4.1
+py4j==0.10.9.7
+
+# Cassandra (Speed Layer)
+cassandra-driver==3.28.0
+
+# PostgreSQL
+psycopg2-binary==2.9.7
+
+# FastAPI (Serving Layer)
+fastapi==0.103.1
+uvicorn==0.23.2
+python-multipart==0.0.6
+
+# InfluxDB
+influxdb-client==1.37.0
+
+# Airflow (déjà inclus dans l'image Docker)
+# apache-airflow==2.7.0

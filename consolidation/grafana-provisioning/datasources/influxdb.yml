@@ -1,0 +1,28 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    uid: influxdb
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    jsonData:
+      version: Flux
+      organization: lambda_org
+      defaultBucket: speed_bucket
+    secureJsonData:
+      token: lambda-token
+  
+  - name: PostgreSQL
+    uid: postgresql
+    type: postgres
+    access: proxy
+    url: postgres-batch:5432
+    database: weather_db
+    user: weather
+    secureJsonData:
+      password: weather
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1400
